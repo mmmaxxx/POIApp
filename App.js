@@ -8,13 +8,9 @@
 
 import React, {useEffect, useState, useRef} from 'react';
 import {
-    SafeAreaView,
     StyleSheet,
-    ScrollView,
-    View,
-    Text,
     StatusBar,
-    TouchableHighlight,
+    Alert,
 } from 'react-native';
 import styled from 'styled-components';
 import MapView, {Marker} from 'react-native-maps';
@@ -46,7 +42,7 @@ const MainView = styled.View`
 
 const CtaView = styled.View`
     position: absolute;
-    height: 200px;
+    height: 120px;
     bottom: 0;
     left: 0;
     right: 0;    
@@ -54,37 +50,46 @@ const CtaView = styled.View`
 
 const SaveButton = styled.TouchableHighlight`
     border-radius: 100px;
-    background: white;
-    width: 150px;
-    height: 150px;
-    box-shadow: 0 0 15px rgba(0,0,0,0.4);
+    background: orange;
+    width: 95px;
+    height: 95px;
+    box-shadow: 0 0 35px rgba(0,0,0,0.4);
+  
     margin: 0 auto;
 `;
 
-const CustomMarkerView = styled.View`
-    border-radius: 100px;
-    background: white;
-    box-shadow: 0 0 4px rgba(0,0,0,0.05);
-    width: 50px;
-    height: 50px;
-`;
-
-const CustomMarkerViewText = styled.Text`
-    position: absolute;
-    right: -55px;
-    background: white;
-    top: 5px;
-`;
-
-
 const SaveButtonText = styled.Text`
     position: absolute;
-    top: 55px;
+    top: 30px;
     left: 0;
     right: 0;
     text-align: center;
     font-size: 30px;
 `;
+
+const CustomMarkerView = styled.TouchableHighlight`
+    border-radius: 100px;
+    background: orange;
+    box-shadow: 0 0 4px rgba(0,0,0,0.05);
+    width: 50px;
+    height: 50px;
+`;
+
+const CustomMarkerViewText = styled.TouchableHighlight`
+    position: absolute;
+    right: -25px;
+    background: white;
+    width: 100px;
+    text-align: center;
+    box-shadow: 0 0 4px rgba(0,0,0,0.15);
+    top: -65px;
+    padding: 10px;
+`;
+
+const CustomMarkerViewTextInner = styled.Text`
+    text-align: center;
+`;
+
 
 const App: () => React$Node = () => {
 
@@ -115,10 +120,10 @@ const App: () => React$Node = () => {
                     longitude: position.coords.longitude,
                 },
                 heading: 90,
-                    pitch: 0,
+                pitch: 0,
             };
             console.log('ANIMATE TO', camera);
-            if(mapRef) {
+            if (mapRef) {
                 mapRef.current.animateCamera(camera);
             }
         });
@@ -138,7 +143,7 @@ const App: () => React$Node = () => {
             await storage.save({key: 'userLocation', data: currentData});
             setAllLocations(currentData);
 
-        } catch(err) {
+        } catch (err) {
             console.log('ERR IS', err);
             currentData = [];
             currentData.push({title, latitude: currentLocation.latitude, longitude: currentLocation.longitude});
@@ -147,6 +152,27 @@ const App: () => React$Node = () => {
         }
 
         setPromptVisible(false);
+    };
+
+    const confirmDelete = (d) => {
+        Alert.alert(
+            'Max POI App',
+            'Delete this POI?',
+            [
+                {text: 'No', onPress: () => null},
+                {text: 'Yes', onPress: () => deleteMarker(d)},
+            ],
+            {cancelable: true},
+        );
+    };
+
+    const deleteMarker = async (d) => {
+        console.log('DELETE MARKER', d);
+
+        const updatedLocations = allLocations.filter((v) => d !== v);
+        console.log('DELETE MARKER 1', updatedLocations);
+        await storage.save({key: 'userLocation', data: updatedLocations});
+        setAllLocations(updatedLocations);
     };
 
     return (
@@ -160,7 +186,7 @@ const App: () => React$Node = () => {
                                 ref={mapRef}
                                 style={mapStyle.container}
                                 zoomEnabled={true}
-                                showsUserLocation={true}
+                                showsUserLocation={false}
                                 initialRegion={{
                                     latitude: currentLocation.latitude,
                                     longitude: currentLocation.longitude,
@@ -171,24 +197,30 @@ const App: () => React$Node = () => {
                                 {
                                     allLocations.map((m, i) => (
                                         <Marker key={i} coordinate={{latitude: m.latitude, longitude: m.longitude}}>
-                                            <CustomMarkerView>
-                                                <CustomMarkerViewText>{m.title}</CustomMarkerViewText>
+                                            <CustomMarkerView onPress={() => confirmDelete(m)}>
+                                                <CustomMarkerViewText>
+                                                    <CustomMarkerViewTextInner>{m.title}</CustomMarkerViewTextInner>
+                                                </CustomMarkerViewText>
                                             </CustomMarkerView>
                                         </Marker>
                                     ))
                                 }
                             </MapView>
-                            <CtaView>
-                                <SaveButton onPress={() => setPromptVisible(true)}>
-                                    <SaveButtonText>Save</SaveButtonText>
-                                </SaveButton>
-                            </CtaView>
+                            {
+                                !promptVisible && (
+                                    <CtaView>
+                                        <SaveButton onPress={() => setPromptVisible(true)}>
+                                            <SaveButtonText>PIN</SaveButtonText>
+                                        </SaveButton>
+                                    </CtaView>
+                                )
+                            }
                             <Prompt
-                                title="Name"
+                                title="Remember this POI as:"
                                 placeholder="Remember this POI as..."
-                                visible={ promptVisible }
-                                onCancel={ () => setPromptVisible(false) }
-                                onSubmit={ (title) => saveLocation(title) }/>
+                                visible={promptVisible}
+                                onCancel={() => setPromptVisible(false)}
+                                onSubmit={(title) => saveLocation(title)}/>
                         </MainView>
                     )
                 }
@@ -239,7 +271,7 @@ const styles = StyleSheet.create({
 const mapStyle = StyleSheet.create({
     container: {
         flex: 1,
-    }
+    },
 });
 
 export default App;
